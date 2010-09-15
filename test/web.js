@@ -18,15 +18,18 @@ exports.webserver = function (assert) {
     server.use(connect.router(function (app) {
         app.get('/', function (req, res) {
             res.writeHead(200, { 'Content-Type' : 'text/html' });
-            res.write('catface');
+            res.write(req.session.name || 'nobody');
             res.end();
         });
         
         app.post('/login', function (req, res) {
             res.writeHead(200, { 'Content-Type' : 'text/html' });
             if (req.body.user == 'substack' && req.body.pass == 'hax') {
-                
-                res.write('ok');
+                req.session.regenerate(function (err) {
+                    if (err) throw err;
+                    req.session.name = req.body.user;
+                    res.write('ok');
+                });
             }
             else {
                 res.write('failed');
@@ -47,12 +50,23 @@ exports.webserver = function (assert) {
     setTimeout(function () {
         agent
             .request({ uri : '/' }, function (err, res, body) {
-                assert.equal('catface', body);
-                console.dir(agent.cookies);
+                assert.ok(!err);
+                assert.equal(body, 'nobody');
             })
+            .request(
+                {
+                    uri : '/login',
+                    method : 'POST',
+                    body : { user : 'substack', pass : 'hax' }
+                },
+                function (err, res, body) {
+                    assert.ok(!err);
+                    assert.equal(body, 'ok');
+                }
+            )
             .request({ uri : '/' }, function (err, res, body) {
-                assert.equal('catface', body);
-                console.dir(agent.cookies);
+                assert.ok(!err);
+                assert.equal(body, 'substack');
             })
         ;
     }, 100);
@@ -79,18 +93,30 @@ function Agent (uri, cookies) {
     
     function next () {
         var r = requests.shift();
-        if (r) process(r.params, r.cb);
+        if (r) process(Hash.copy(r.params), r.cb);
     }
     
     function process (params, cb) {
-        request(Hash.merge(params, {
-            uri : uri + params.uri,
-            headers : Hash.merge(params.headers, {
-                cookie : qs.stringify(Hash.merge(
-                    self.cookies,
-                    qs.parse((params.headers || {}).cookie)
-                ))
-            })}),
+        var headers = Hash.merge(params.headers, {
+            cookie : qs.stringify(Hash.merge(
+                self.cookies,
+                qs.parse((params.headers || {}).cookie)
+            ))
+        });
+        if (params.method == 'POST') {
+            if (params.body && !headers['Content-Type']) {
+                headers['Content-Type'] = 'application/x-www-form-urlencoded';
+            }
+            if (!Array.isArray(params.body) && typeof params.body == 'object') {
+                params.body = qs.stringify(params.body);
+            }
+        }
+        
+        request(
+            Hash.merge(params, {
+                uri : uri + params.uri,
+                headers : headers
+            }),
             function (err, res, body) {
                 ((res.headers || {})['set-cookie'] || [])
                     .forEach(function (raw) {
