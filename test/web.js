@@ -45,21 +45,44 @@ exports.webserver = function (assert) {
     var agent = new Agent('http://localhost:' + port);
     
     setTimeout(function () {
-        agent.request({ uri : '/' }, function (err, res, body) {
-console.log(body);
-            assert.equal('catface', body);
-console.dir(agent.cookies);
-        });
+        agent
+            .request({ uri : '/' }, function (err, res, body) {
+                assert.equal('catface', body);
+                console.dir(agent.cookies);
+            })
+            .request({ uri : '/' }, function (err, res, body) {
+                assert.equal('catface', body);
+                console.dir(agent.cookies);
+            })
+        ;
     }, 100);
     
     setTimeout(function () { server.close() }, 500);
 };
 
-function Agent (uri) {
+function Agent (uri, cookies) {
     var self = this;
-    self.cookies = {};
+    self.cookies = cookies || {};
+    var requests = [];
     
     self.request = function (params, cb) {
+        requests.push({
+            params : params,
+            cb : function (err, res, body) {
+                cb(err, res, body);
+                next();
+            }
+        });
+        next();
+        return self;
+    };
+    
+    function next () {
+        var r = requests.shift();
+        if (r) process(r.params, r.cb);
+    }
+    
+    function process (params, cb) {
         request(Hash.merge(params, {
             uri : uri + params.uri,
             headers : Hash.merge(params.headers, {
