@@ -22,19 +22,13 @@ exports.webserver = function (assert) {
             res.end();
         });
         
-        app.post('/login', function (req, res) {
+        app.get('/login', function (req, res) {
             res.writeHead(200, { 'Content-Type' : 'text/html' });
-            if (req.body.user == 'substack' && req.body.pass == 'hax') {
-                req.session.regenerate(function (err) {
-                    if (err) throw err;
-                    req.session.name = req.body.user;
-                    res.write('ok');
-                });
-            }
-            else {
-                res.write('failed');
-            }
-            res.end();
+            req.session.regenerate(function (err) {
+                if (err) throw err;
+                req.session.name = 'substack';
+                res.end('ok');
+            });
         });
         
         app.get('/logout', function (req, res) {
@@ -53,20 +47,14 @@ exports.webserver = function (assert) {
                 assert.ok(!err);
                 assert.equal(body, 'nobody');
             })
-            .request(
-                {
-                    uri : '/login',
-                    method : 'POST',
-                    body : { user : 'substack', pass : 'hax' }
-                },
-                function (err, res, body) {
-                    assert.ok(!err);
-                    assert.equal(body, 'ok');
-                }
-            )
+            .request({ uri : '/login', }, function (err, res, body) {
+                assert.ok(!err);
+                assert.equal(body, 'ok');
+            })
             .request({ uri : '/' }, function (err, res, body) {
                 assert.ok(!err);
                 assert.equal(body, 'substack');
+                server.close();
             })
             .end()
         ;
@@ -81,22 +69,21 @@ function Agent (uri, cookies) {
     var requests = [];
     
     self.request = function (params, cb) {
-        requests.push({
-            params : params,
-            cb : function (err, res, body) {
-                cb(err, res, body);
-                next();
-            }
-        });
+        requests.push({ params : params, cb : cb });
         return self;
     };
     
-    self.end = function () { next() };
-    
-    function next () {
-        var r = requests.shift();
-        if (r) process(Hash.copy(r.params), r.cb);
-    }
+    self.end = function () {
+        if (!requests.length) return;
+        
+        (function next () {
+            var r = requests.shift();
+            if (r) process(Hash.copy(r.params), function (err, res, body) {
+                r.cb(err, res, body);
+                next();
+            });
+        })();
+    };
     
     function process (params, cb) {
         var headers = Hash.copy(params.headers || {});
