@@ -7,12 +7,11 @@ exports.webserver = function (assert) {
     
     var server = connect.createServer();
     server.use(connect.cookieDecoder());
-    //*
     server.use(connect.session({
         store : new Cart({ dbFile : '/tmp/cart-' + port + '.db' }),
         secret : 'meowmers',
     }));
-    //*/
+    
     server.use(connect.router(function (app) {
         app.get('/', function (req, res) {
             res.writeHead(200, { 'Content-Type' : 'text/html' });
@@ -22,7 +21,7 @@ exports.webserver = function (assert) {
     }));
     server.listen(port, 'localhost');
     
-    {
+    setTimeout(function () {
         var client = http.createClient(port);
         var req = client.request('GET', '/', { host : 'localhost' });
         req.end();
@@ -32,5 +31,5 @@ exports.webserver = function (assert) {
             });
             server.close();
         });
-    }
+    }, 100);
 };
