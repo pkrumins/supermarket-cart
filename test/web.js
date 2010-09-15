@@ -68,6 +68,7 @@ exports.webserver = function (assert) {
                 assert.ok(!err);
                 assert.equal(body, 'substack');
             })
+            .end()
         ;
     }, 100);
     
@@ -87,9 +88,10 @@ function Agent (uri, cookies) {
                 next();
             }
         });
-        next();
         return self;
     };
+    
+    self.end = function () { next() };
     
     function next () {
         var r = requests.shift();
@@ -97,12 +99,15 @@ function Agent (uri, cookies) {
     }
     
     function process (params, cb) {
-        var headers = Hash.merge(params.headers, {
-            cookie : qs.stringify(Hash.merge(
+        var headers = Hash.copy(params.headers || {});
+        
+        if (Hash.size(self.cookies)) {
+            headers.cookie = qs.stringify(Hash.map(
                 self.cookies,
-                qs.parse((params.headers || {}).cookie)
-            ))
-        });
+                function (c) { return c.value }
+            ));
+        }
+        
         if (params.method == 'POST') {
             if (params.body && !headers['Content-Type']) {
                 headers['Content-Type'] = 'application/x-www-form-urlencoded';
@@ -118,16 +123,16 @@ function Agent (uri, cookies) {
                 headers : headers
             }),
             function (err, res, body) {
-                ((res.headers || {})['set-cookie'] || [])
-                    .forEach(function (raw) {
-                        var key = raw.split(/=/)[0];
-                        self.cookies[key] = {};
-                        raw.replace(key, 'value').split(/;\s*/)
-                            .forEach(function (kv) {
-                                var k = kv.split(/=/)[0];
-                                self.cookies[key][k] = kv.split(/=/)[1] || true;
-                            });
+                var set = (res.headers || {})['set-cookie'] || [];
+                set.forEach(function (raw) {
+                    var key = raw.split(/=/)[0];
+                    self.cookies[key] = {};
+                    var vars = raw.replace(key, 'value').split(/;\s*/);
+                    vars.forEach(function (kv) {
+                        var k = kv.split(/=/)[0];
+                        self.cookies[key][k] = kv.split(/=/)[1] || true;
                     });
+                });
                 cb(err, res, body);
             }
         );
