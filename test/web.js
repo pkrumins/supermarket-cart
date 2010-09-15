@@ -23,10 +23,10 @@ exports.webserver = function (assert) {
         });
         
         app.get('/login', function (req, res) {
-            res.writeHead(200, { 'Content-Type' : 'text/html' });
             req.session.regenerate(function (err) {
                 if (err) throw err;
                 req.session.name = 'substack';
+                res.writeHead(200, { 'Content-Type' : 'text/html' });
                 res.end('ok');
             });
         });
@@ -59,8 +59,6 @@ exports.webserver = function (assert) {
             .end()
         ;
     }, 100);
-    
-    setTimeout(function () { server.close() }, 500);
 };
 
 function Agent (uri, cookies) {
@@ -78,10 +76,12 @@ function Agent (uri, cookies) {
         
         (function next () {
             var r = requests.shift();
-            if (r) process(Hash.copy(r.params), function (err, res, body) {
-                r.cb(err, res, body);
-                next();
-            });
+            if (r) {
+                process(Hash.copy(r.params), function (err, res, body) {
+                    r.cb(err, res, body);
+                    next();
+                });
+            }
         })();
     };
     
@@ -111,6 +111,7 @@ function Agent (uri, cookies) {
             }),
             function (err, res, body) {
                 var set = (res.headers || {})['set-cookie'] || [];
+                if (typeof set == 'string') set = [set];
                 set.forEach(function (raw) {
                     var key = raw.split(/=/)[0];
                     self.cookies[key] = {};
