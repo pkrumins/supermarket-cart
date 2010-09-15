@@ -9,7 +9,7 @@ exports.webserver = function (assert) {
     server.use(connect.cookieDecoder());
     server.use(connect.session({
         store : new Cart({ dbFile : '/tmp/cart-' + port + '.db' }),
-        secret : 'meowmers',
+        secret : 'salty-' + Math.floor(Math.random() * 1e16)
     }));
     
     server.use(connect.router(function (app) {
