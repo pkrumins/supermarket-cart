@@ -26,7 +26,7 @@
         "node": ">=0.2.0"
     },
     "dependencies" : {
-        "supermarket" : ">=1.0.8"
+        "supermarket" : ">=1.0.9"
     }
 }
 
