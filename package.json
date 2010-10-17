@@ -1,6 +1,6 @@
 {
     "name" : "cart",
-    "version" : "1.0.2",
+    "version" : "1.0.3",
     "description" : "Connect session store using supermarket",
     "modules" : {
         "index" : "./lib/cart.js"
@@ -26,7 +26,7 @@
         "node": ">=0.2.0"
     },
     "dependencies" : {
-        "supermarket" : ">=1.0.9"
+        "supermarket" : ">=1.1.0"
     }
 }
 
