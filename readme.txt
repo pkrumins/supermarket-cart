@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/pkrumins/supermarket-cart.png)](http://travis-ci.org/pkrumins/supermarket-cart)
 This is a connect [1] session store using supermarket [2].
 
 It was written by Peteris Krumins (peter@catonmat.net).
