@@ -6,7 +6,6 @@ var qs = require('querystring');
 
 exports.webserver = function (assert) {
     var port = Math.floor(Math.random() * 40000 + 10000);
-    
     var server = connect.createServer();
     server.use(connect.cookieDecoder());
     server.use(connect.bodyDecoder());
@@ -23,7 +22,7 @@ exports.webserver = function (assert) {
         });
         
         app.get('/login', function (req, res) {
-            req.session.regenerate(function (err) {
+            req.session.regenerate(function (error) {
                 if (err) throw err;
                 req.session.name = 'substack';
                 res.writeHead(200, { 'Content-Type' : 'text/html' });
